@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 from pathlib import Path
 from PIL import Image
@@ -52,29 +53,42 @@ xvals = np.linspace(0, len(wav_ref), 1000)
 wav_int = np.interp(xvals, range(len(wav_ref)), wav_ref)
 peak = True
 
-# for H_idx, HyS_fp in enumerate(HyS_data_paths):
-H_idx = 0
-HyS_fp = '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/Hyperspectral/1'
+# H_idx = 0
+# HyS_fp = '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/Hyperspectral/1'
+for H_idx, HyS_fp in enumerate(HyS_data_paths):
 
-imstack = fn.build_image_stack(HyS_fp)
+    # imstack = fn.build_image_stack(HyS_fp)
 
-if peak:
-    resonance_indexes = np.argmax(imstack, axis=2)
-else:
-    resonance_indexes = np.argmin(imstack, axis=2)
+    # if peak:
+    #     resonance_indexes = np.argmax(imstack, axis=2)
+    # else:
+    #     resonance_indexes = np.argmin(imstack, axis=2)
 
-map_store[:, :, H_idx] = wav_ref[resonance_indexes]
-print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
+    # map_store[:, :, H_idx] = wav_ref[resonance_indexes]
+    temp_filepath = Path(
+        '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/temp_mapstore.npy')
+    map_store = np.load(temp_filepath, mmap_mode='r')
+    print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
 
-fig, ax = plt.subplots(1, 1)
-ax.axes.xaxis.set_visible(False)
-ax.axes.yaxis.set_visible(False)
-img = ax.imshow(map_store[:, :, H_idx],
-                interpolation='bilinear',
-                cmap='autumn')
-img.set_clim(vmin=Settings.wave_initial,
-             vmax=Settings.wave_final - Settings.wave_step)
-bar = plt.colorbar(img)
-bar.set_label('Resonant Wavelength [nm]')
-plt.show()
-#  ###for loop end
+    fig, ax = plt.subplots(1, 1)
+    ax.axes.xaxis.set_visible(False)
+    ax.axes.yaxis.set_visible(False)
+    img = ax.imshow(map_store[:, :, H_idx],
+                    interpolation='bilinear',
+                    cmap='autumn')
+    img.set_clim(vmin=Settings.wave_initial,
+                 vmax=Settings.wave_final - Settings.wave_step)
+    bar = plt.colorbar(img)
+    bar.set_label('Resonant Wavelength [nm]')
+
+    pts = []
+    while len(pts) < 3:
+        plt.title('Select 3 points with mouse', fontsize=16)
+        plt.draw()
+        pts = np.asarray(plt.ginput(3, timeout=-1))
+        if len(pts) < 3:
+            plt.title('Too few points, starting over', fontsize=16)
+            plt.draw()
+            time.sleep(1)  # Wait a second
+
+    break
