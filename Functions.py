@@ -3,6 +3,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 
 from PIL import Image
+from pathlib import Path
 from matplotlib.animation import FFMpegWriter
 from matplotlib.offsetbox import AnchoredText
 
@@ -37,3 +38,21 @@ def save_phasecontrast_video(t_interval, PhC_data_paths):
             ax.add_artist(at)
 
             writer.grab_frame()
+
+
+def build_image_stack(HyS_fp):
+    data_paths = [h for h in Path(HyS_fp).glob('*.tiff')]
+
+    # This is BAD, filename should be standardised or use delimiters
+    data_paths.sort(key=lambda x: int(x.stem[6:]))
+    temp_im = Image.open(data_paths[0])
+    imstack = np.zeros((temp_im.size[1], temp_im.size[0], len(data_paths)))
+
+    for d_idx, d in enumerate(data_paths):
+        with Image.open(d) as im:
+            imstack[:, :, d_idx] = im
+            print(f'Imported image {d_idx} of {len(data_paths)}')
+
+    # np.save(f'imstack_{H_idx}.npy', imstack)  # Results in a 2.2Gb file, larger than images when stored separately
+
+    return imstack
