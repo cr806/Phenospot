@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import time
+
 
 from pathlib import Path
 from PIL import Image
@@ -66,29 +66,11 @@ for H_idx, HyS_fp in enumerate(HyS_data_paths):
 
     # map_store[:, :, H_idx] = wav_ref[resonance_indexes]
     temp_filepath = Path(
-        '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/temp_mapstore.npy')
-    map_store = np.load(temp_filepath, mmap_mode='r')
+        '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/test_map.tiff')
+    map_store = np.array(Image.open(temp_filepath))
     print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
 
-    fig, ax = plt.subplots(1, 1)
-    ax.axes.xaxis.set_visible(False)
-    ax.axes.yaxis.set_visible(False)
-    img = ax.imshow(map_store[:, :, H_idx],
-                    interpolation='bilinear',
-                    cmap='autumn')
-    img.set_clim(vmin=Settings.wave_initial,
-                 vmax=Settings.wave_final - Settings.wave_step)
-    bar = plt.colorbar(img)
-    bar.set_label('Resonant Wavelength [nm]')
-
-    pts = []
-    while len(pts) < 3:
-        plt.title('Select 3 points with mouse', fontsize=16)
-        plt.draw()
-        pts = np.asarray(plt.ginput(3, timeout=-1))
-        if len(pts) < 3:
-            plt.title('Too few points, starting over', fontsize=16)
-            plt.draw()
-            time.sleep(1)  # Wait a second
-
+    roi_locs = fn.get_ROIs(map_store, num_of_ROIs=3, ROI_size=(100, 100))
     break
+
+print(f'{roi_locs=}')

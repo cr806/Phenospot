@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 from PIL import Image
 from pathlib import Path
@@ -56,3 +57,57 @@ def build_image_stack(HyS_fp):
     # np.save(f'imstack_{H_idx}.npy', imstack)  # Results in a 2.2Gb file, larger than images when stored separately
 
     return imstack
+
+
+def get_ROIs(data_image, num_of_ROIs=4, ROI_size=(100, 100)):
+    fig, ax = plt.subplots(1, 1)
+    ax.axes.xaxis.set_visible(False)
+    ax.axes.yaxis.set_visible(False)
+    img = ax.imshow(data_image,
+                    interpolation='bilinear',
+                    cmap='autumn')
+    # img.set_clim(vmin=Settings.wave_initial,
+    #              vmax=Settings.wave_final - Settings.wave_step)
+    bar = plt.colorbar(img)
+    bar.set_label('Resonant Wavelength [nm]')
+
+    roi_locs = []
+    while True:
+        plt.title(f'You have selected {len(roi_locs)} / {num_of_ROIs}',
+                  fontsize=16)
+        for pt in roi_locs:
+            rect = patches.Rectangle(pt,
+                                     ROI_size[0],
+                                     ROI_size[1],
+                                     linewidth=2,
+                                     edgecolor='w',
+                                     facecolor='none')
+            ax.add_patch(rect)
+        plt.draw()
+        if len(roi_locs) >= num_of_ROIs:
+            break
+        pt = plt.ginput(1, timeout=-1)[0]
+        pt = (int(pt[0] - ROI_size[0]/2), int(pt[1] - ROI_size[1]/2))
+        roi_locs.append(pt)
+
+    plt.pause(0.5)
+    plt.close(fig)
+
+    fig = plt.figure(figsize=(10, 10))  # width, height in inches
+    plt.title('ROIs to be measured', fontsize=16)
+    plt.gca().axes.axis('off')
+    for i in range(num_of_ROIs):
+        sub_x = int(np.ceil(np.sqrt(num_of_ROIs)))
+        sub_y = int(np.ceil(num_of_ROIs / sub_x))
+        sub = fig.add_subplot(sub_x, sub_y, i + 1)
+        sub.axes.get_xaxis().set_ticks([])
+        sub.axes.get_yaxis().set_ticks([])
+        sub.set_xlabel(f'ROI: {i}')
+        temp = data_image[int(roi_locs[i][1]):int(roi_locs[i][1] + ROI_size[1]),
+                          int(roi_locs[i][0]):int(roi_locs[i][0] + ROI_size[0])]
+        sub.imshow(temp,
+                   interpolation='bilinear',
+                   cmap='autumn')
+    plt.show()
+
+    return roi_locs
