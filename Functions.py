@@ -113,7 +113,8 @@ def get_Pts(data_image, num_of_pts=4, ROI_size=(100, 100), ROI=True):
             sub.imshow(temp,
                        interpolation='bilinear',
                        cmap='autumn')
-        plt.show()
+        plt.pause(1)
+        plt.close(fig)
     else:
         plt.title('Area to be analysed', fontsize=16)
         pos = locs[0] if locs[1][0] > locs[0][0] else locs[1]
@@ -126,6 +127,7 @@ def get_Pts(data_image, num_of_pts=4, ROI_size=(100, 100), ROI=True):
                                  edgecolor='w',
                                  facecolor='none')
         ax.add_patch(rect)
-        plt.draw()
+        plt.pause(1)
+        plt.close(fig)
 
     return locs

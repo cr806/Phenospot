@@ -293,55 +293,55 @@ for n = 1:cellnum
     
 
 
-        %% calculating average resonance wavelength of each ROI
+      %% calculating average resonance wavelength of each ROI
 
-        map1 =mapstore(:,:,K);
-        refmap = imcrop(map1,rect{1}); 
-        map1 = imcrop(map1,rect{n}); 
-          
-        avref1(K) = mean(mean(mean(refmap(:,1))));
-        avref2(K) = mean(mean(mean(refmap(1,:))));
-        avref(K) = mean([avref1(K) avref2(K)]);
-        avref_norm(K) = avref(K)-avref(1);
-
-
-        av1(K) = mean(mean(mean(map1(:,1))));
-        av2(K) = mean(mean(mean(map1(1,:))));
-        av(K) = mean(mean(map1));
-        av_norm(K) = av(K)-av(1);
-
-        map1_wiener = wiener2(wiener2(wiener2(map1,[20 20])));
-        map1_norm = (map1_wiener-av(K));
+      map1 =mapstore(:,:,K);
+      refmap = imcrop(map1,rect{1}); 
+      map1 = imcrop(map1,rect{n}); 
+        
+      avref1(K) = mean(mean(mean(refmap(:,1))));
+      avref2(K) = mean(mean(mean(refmap(1,:))));
+      avref(K) = mean([avref1(K) avref2(K)]);
+      avref_norm(K) = avref(K)-avref(1);
 
 
-      
-        %% imshow
-        fig3 = figure(3)
-        sub(1) = subplot(1,2,1)
-        imshow(map1_norm)
-        title(['resmap of picowell ',sprintf('%d',n)])
-        shading interp
-        caxis([-1 1]);
+      av1(K) = mean(mean(mean(map1(:,1))));
+      av2(K) = mean(mean(mean(map1(1,:))));
+      av(K) = mean(mean(map1));
+      av_norm(K) = av(K)-av(1);
 
-        colormap(jet(128));
-        c = colorbar;
-        c.Label.String = '\Delta\lambda [nm]';
-        set(gca,'xticklabel','','yticklabel','')
-        set(gca,'Fontsize',10)
-
-        sub(2) = subplot(1,2,2)
-        imshow(A)
-        title('Phase contrast')
-        colormap(gray);
+      map1_wiener = wiener2(wiener2(wiener2(map1,[20 20])));
+      map1_norm = (map1_wiener-av(K));
 
 
+    
+      %% imshow
+      fig3 = figure(3)
+      sub(1) = subplot(1,2,1)
+      imshow(map1_norm)
+      title(['resmap of picowell ',sprintf('%d',n)])
+      shading interp
+      caxis([-1 1]);
 
-        set(gca,'xticklabel','','yticklabel','')
-        set(gca,'Fontsize',10)
-        %   
+      colormap(jet(128));
+      c = colorbar;
+      c.Label.String = '\Delta\lambda [nm]';
+      set(gca,'xticklabel','','yticklabel','')
+      set(gca,'Fontsize',10)
 
-        colormap(sub(1),jet(128))
-        colormap(sub(2),gray)
+      sub(2) = subplot(1,2,2)
+      imshow(A)
+      title('Phase contrast')
+      colormap(gray);
+
+
+
+      set(gca,'xticklabel','','yticklabel','')
+      set(gca,'Fontsize',10)
+      %   
+
+      colormap(sub(1),jet(128))
+      colormap(sub(2),gray)
 
 
 

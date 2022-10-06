@@ -1,3 +1,4 @@
+from pyexpat.errors import XML_ERROR_INCOMPLETE_PE
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,7 +15,7 @@ exp_path = Path(Settings.exp_path)
 
 HyS_path = Path(Settings.HyS_path)
 PhC_path = Path(Settings.PhC_path)
-
+map_savepath = Path(f'{Settings.savepath}/{Settings.mapfilename}')
 savepath = Path(Settings.savepath)
 
 PhC_data_paths = [p for p in PhC_path.glob('*.tiff')]
@@ -28,7 +29,7 @@ temp_im = Image.open(PhC_data_paths[0])
 nfiles = len(PhC_data_paths)
 all_data = list()
 basenames = list()
-res_wav = np.zeros(len(HyS_data_paths))
+res_wav = list()
 time_elapsed = np.arange(len(HyS_data_paths))
 map_store = np.zeros((temp_im.size[1], temp_im.size[0], len(HyS_data_paths)))
 
@@ -65,13 +66,63 @@ for H_idx, HyS_fp in enumerate(HyS_data_paths):
     #     resonance_indexes = np.argmin(imstack, axis=2)
 
     # map_store[:, :, H_idx] = wav_ref[resonance_indexes]
+    
+    ############## TEMP CODE FOR TESTING TO SAVE LOADING IMAGES #############
     temp_filepath = Path(
-        '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/test_map.tiff')
-    map_store = np.array(Image.open(temp_filepath))
+        '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/test_map_store.npy')
+    map_store = np.load(temp_filepath, mmap_mode='r')
+    temp_filepath = Path(
+        '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/test_imstack.npy')
+    imstack = np.load(temp_filepath, mmap_mode='r')
+    #########################################################################
+    
     print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
 
-    roi_locs = fn.get_Pts(map_store, num_of_pts=1,
+    roi_locs = fn.get_Pts(map_store[:, :, 0], num_of_pts=1,
                           ROI_size=(100, 100), ROI=False)
+
+    y_min = min(roi_locs[0][1], roi_locs[1][1])
+    y_max = max(roi_locs[0][1], roi_locs[1][1])
+    x_min = min(roi_locs[0][0], roi_locs[1][0])
+    x_max = max(roi_locs[0][0], roi_locs[1][0])
+
+    region = imstack[y_min:y_max, x_min:x_max, :]  # slice imstack to ROI 
+    mapregion = map_store[y_min:y_max, x_min:x_max, 0]  # slice mapstore
+    av_spec = np.mean(region, axis=(0, 1))  # take mean of each 2D region
+    res_wav.append(wav_ref[np.argmax(av_spec)])  # find peak of spectrum
+
+    ''' Display area that will be measured'''
+    fig = plt.figure(figsize=(7, 7))
+    font_params = {'figure.titlesize': 20,
+                'axes.titlesize': 15,
+                'axes.labelsize': 15,
+                'xtick.labelsize': 12,
+                'ytick.labelsize': 12,
+                'legend.fontsize': 12}
+    plt.rcParams.update(font_params)
+    plt.title('Area to be measured', fontsize=16)
+    plt.imshow(mapregion,
+               interpolation='bilinear',
+               cmap='autumn')
+    plt.pause(1)
+    plt.close(fig)
+
+    '''Display spectrum from analysed area'''
+    fig = plt.figure(figsize=(7, 7))
+    font_params = {'figure.titlesize': 20,
+                   'axes.titlesize': 15,
+                   'axes.labelsize': 15,
+                   'xtick.labelsize': 12,
+                   'ytick.labelsize': 12,
+                   'legend.fontsize': 12}
+    plt.rcParams.update(font_params)
+    plt.title('Spectrum of averaged area', fontsize=16)
+    plt.plot(wav_ref, av_spec, 'or')
+    plt.xlabel('Wavelength [nm]')
+    plt.ylabel('Reflectance [a.u.]')
+    plt.show()
+
     break
 
-print(f'{roi_locs=}')
+print(f'{res_wav=}')
+np.save(map_savepath, map_store)

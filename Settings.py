@@ -5,7 +5,7 @@ exp_path = '/Phenospot_TF_data_science_support/Matlab/data/Location_1'
 HyS_path = f'{root_path}/{exp_path}/Hyperspectral'
 PhC_path = f'{root_path}/{exp_path}/Phasecontrast'
 savepath = f'{root_path}/{exp_path}'
-mapfilename = ''
+mapfilename = 'test_mapstore.npy'
 
 wave_initial = 670
 wave_final = 690
