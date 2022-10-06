@@ -70,7 +70,8 @@ for H_idx, HyS_fp in enumerate(HyS_data_paths):
     map_store = np.array(Image.open(temp_filepath))
     print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
 
-    roi_locs = fn.get_ROIs(map_store, num_of_ROIs=3, ROI_size=(100, 100))
+    roi_locs = fn.get_Pts(map_store, num_of_pts=1,
+                          ROI_size=(100, 100), ROI=False)
     break
 
 print(f'{roi_locs=}')

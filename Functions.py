@@ -59,7 +59,9 @@ def build_image_stack(HyS_fp):
     return imstack
 
 
-def get_ROIs(data_image, num_of_ROIs=4, ROI_size=(100, 100)):
+def get_Pts(data_image, num_of_pts=4, ROI_size=(100, 100), ROI=True):
+    if not ROI:
+        num_of_pts = 2
     fig, ax = plt.subplots(1, 1)
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
@@ -71,43 +73,59 @@ def get_ROIs(data_image, num_of_ROIs=4, ROI_size=(100, 100)):
     bar = plt.colorbar(img)
     bar.set_label('Resonant Wavelength [nm]')
 
-    roi_locs = []
+    locs = []
     while True:
-        plt.title(f'You have selected {len(roi_locs)} / {num_of_ROIs}',
+        plt.title(f'You have selected {len(locs)} / {num_of_pts}',
                   fontsize=16)
-        for pt in roi_locs:
-            rect = patches.Rectangle(pt,
-                                     ROI_size[0],
-                                     ROI_size[1],
-                                     linewidth=2,
-                                     edgecolor='w',
-                                     facecolor='none')
-            ax.add_patch(rect)
+        if ROI:
+            for pt in locs:
+                rect = patches.Rectangle(pt,
+                                         ROI_size[0],
+                                         ROI_size[1],
+                                         linewidth=2,
+                                         edgecolor='w',
+                                         facecolor='none')
+                ax.add_patch(rect)
         plt.draw()
-        if len(roi_locs) >= num_of_ROIs:
+        if len(locs) >= num_of_pts:
             break
         pt = plt.ginput(1, timeout=-1)[0]
-        pt = (int(pt[0] - ROI_size[0]/2), int(pt[1] - ROI_size[1]/2))
-        roi_locs.append(pt)
+        if ROI:
+            pt = (pt[0] - ROI_size[0]/2, pt[1] - ROI_size[1]/2)
+        locs.append((int(pt[0]), int(pt[1])))
 
-    plt.pause(0.5)
-    plt.close(fig)
+    if ROI:
+        plt.pause(0.5)
+        plt.close(fig)
 
-    fig = plt.figure(figsize=(10, 10))  # width, height in inches
-    plt.title('ROIs to be measured', fontsize=16)
-    plt.gca().axes.axis('off')
-    for i in range(num_of_ROIs):
-        sub_x = int(np.ceil(np.sqrt(num_of_ROIs)))
-        sub_y = int(np.ceil(num_of_ROIs / sub_x))
-        sub = fig.add_subplot(sub_x, sub_y, i + 1)
-        sub.axes.get_xaxis().set_ticks([])
-        sub.axes.get_yaxis().set_ticks([])
-        sub.set_xlabel(f'ROI: {i}')
-        temp = data_image[int(roi_locs[i][1]):int(roi_locs[i][1] + ROI_size[1]),
-                          int(roi_locs[i][0]):int(roi_locs[i][0] + ROI_size[0])]
-        sub.imshow(temp,
-                   interpolation='bilinear',
-                   cmap='autumn')
-    plt.show()
+        fig = plt.figure(figsize=(10, 10))  # width, height in inches
+        plt.title('ROIs to be measured', fontsize=16)
+        plt.gca().axes.axis('off')
+        for i in range(num_of_pts):
+            sub_x = int(np.ceil(np.sqrt(num_of_pts)))
+            sub_y = int(np.ceil(num_of_pts / sub_x))
+            sub = fig.add_subplot(sub_x, sub_y, i + 1)
+            sub.axes.get_xaxis().set_ticks([])
+            sub.axes.get_yaxis().set_ticks([])
+            sub.set_xlabel(f'ROI: {i}')
+            temp = data_image[int(locs[i][1]):int(locs[i][1] + ROI_size[1]),
+                              int(locs[i][0]):int(locs[i][0] + ROI_size[0])]
+            sub.imshow(temp,
+                       interpolation='bilinear',
+                       cmap='autumn')
+        plt.show()
+    else:
+        plt.title('Area to be analysed', fontsize=16)
+        pos = locs[0] if locs[1][0] > locs[0][0] else locs[1]
+        size_x = max(locs[1][0], locs[0][0]) - min(locs[1][0], locs[0][0])
+        size_y = max(locs[1][1], locs[0][1]) - min(locs[1][1], locs[0][1])
+        rect = patches.Rectangle((pos[0], pos[1] - size_y),
+                                 size_x,
+                                 size_y,
+                                 linewidth=2,
+                                 edgecolor='w',
+                                 facecolor='none')
+        ax.add_patch(rect)
+        plt.draw()
 
-    return roi_locs
+    return locs
