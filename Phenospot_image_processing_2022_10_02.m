@@ -276,90 +276,90 @@ cd(HyS_path)
 %%
 
 for n = 1:cellnum
-    for K = ini:ending
-      filename = filenames{K};
-      [~, basenames{K}, ~] = fileparts(filename);
-      try
-        all_data_cell{K} = imread(filename);
-        A = (all_data_cell{K});
-        A = imcrop(A,rect{n}); 
-        A = (medfilt2(rescale(A(:,:,1))));
+  for K = ini:ending
+    filename = filenames{K};
+    [~, basenames{K}, ~] = fileparts(filename);
+    try
+      all_data_cell{K} = imread(filename);
+      A = (all_data_cell{K});
+      A = imcrop(A,rect{n}); 
+      A = (medfilt2(rescale(A(:,:,1))));
 
 
-      catch ME
-        fprintf('Warning: problem importing file "%s"\n', filename);
-      end
-      K
-    
-
-
-      %% calculating average resonance wavelength of each ROI
-
-      map1 =mapstore(:,:,K);
-      refmap = imcrop(map1,rect{1}); 
-      map1 = imcrop(map1,rect{n}); 
-        
-      avref1(K) = mean(mean(mean(refmap(:,1))));
-      avref2(K) = mean(mean(mean(refmap(1,:))));
-      avref(K) = mean([avref1(K) avref2(K)]);
-      avref_norm(K) = avref(K)-avref(1);
-
-
-      av1(K) = mean(mean(mean(map1(:,1))));
-      av2(K) = mean(mean(mean(map1(1,:))));
-      av(K) = mean(mean(map1));
-      av_norm(K) = av(K)-av(1);
-
-      map1_wiener = wiener2(wiener2(wiener2(map1,[20 20])));
-      map1_norm = (map1_wiener-av(K));
-
-
-    
-      %% imshow
-      fig3 = figure(3)
-      sub(1) = subplot(1,2,1)
-      imshow(map1_norm)
-      title(['resmap of picowell ',sprintf('%d',n)])
-      shading interp
-      caxis([-1 1]);
-
-      colormap(jet(128));
-      c = colorbar;
-      c.Label.String = '\Delta\lambda [nm]';
-      set(gca,'xticklabel','','yticklabel','')
-      set(gca,'Fontsize',10)
-
-      sub(2) = subplot(1,2,2)
-      imshow(A)
-      title('Phase contrast')
-      colormap(gray);
-
-
-
-      set(gca,'xticklabel','','yticklabel','')
-      set(gca,'Fontsize',10)
-      %   
-
-      colormap(sub(1),jet(128))
-      colormap(sub(2),gray)
-
-
-
-        
+    catch ME
+      fprintf('Warning: problem importing file "%s"\n', filename);
     end
-    
-   
-    cd(savepath)
-    save(strcat('av_',num2str(n)),'av_norm')
+    K
+  
 
-    av_norm = (smooth(av_norm));
-    hist(n) = (av_norm(fin));
-    fig4 = figure(4)
-    plot(t_interval,av_norm)
-    hold on
-    xlabel('Time after activation [h]')
-    ylabel('Resonance wavelength [nm]')
-    set(gca,'Fontsize',15)
+
+    %% calculating average resonance wavelength of each ROI
+
+    map1 =mapstore(:,:,K);
+    refmap = imcrop(map1,rect{1}); 
+    map1 = imcrop(map1,rect{n}); 
+      
+    avref1(K) = mean(mean(mean(refmap(:,1))));
+    avref2(K) = mean(mean(mean(refmap(1,:))));
+    avref(K) = mean([avref1(K) avref2(K)]);
+    avref_norm(K) = avref(K)-avref(1);
+
+
+    av1(K) = mean(mean(mean(map1(:,1))));
+    av2(K) = mean(mean(mean(map1(1,:))));
+    av(K) = mean(mean(map1));
+    av_norm(K) = av(K)-av(1);
+
+    map1_wiener = wiener2(wiener2(wiener2(map1,[20 20])));
+    map1_norm = (map1_wiener-av(K));
+
+
+  
+    %% imshow
+    fig3 = figure(3)
+    sub(1) = subplot(1,2,1)
+    imshow(map1_norm)
+    title(['resmap of picowell ',sprintf('%d',n)])
+    shading interp
+    caxis([-1 1]);
+
+    colormap(jet(128));
+    c = colorbar;
+    c.Label.String = '\Delta\lambda [nm]';
+    set(gca,'xticklabel','','yticklabel','')
+    set(gca,'Fontsize',10)
+
+    sub(2) = subplot(1,2,2)
+    imshow(A)
+    title('Phase contrast')
+    colormap(gray);
+
+
+
+    set(gca,'xticklabel','','yticklabel','')
+    set(gca,'Fontsize',10)
+    %   
+
+    colormap(sub(1),jet(128))
+    colormap(sub(2),gray)
+
+
+
+      
+  end
+  
+  
+  cd(savepath)
+  save(strcat('av_',num2str(n)),'av_norm')
+
+  av_norm = (smooth(av_norm));
+  hist(n) = (av_norm(fin));
+  fig4 = figure(4)
+  plot(t_interval,av_norm)
+  hold on
+  xlabel('Time after activation [h]')
+  ylabel('Resonance wavelength [nm]')
+  set(gca,'Fontsize',15)
 
 end
 cd(savepath)

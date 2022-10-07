@@ -10,6 +10,13 @@ from matplotlib.offsetbox import AnchoredText
 
 import Settings
 
+FONT_PARAMS = {'figure.titlesize': 20,
+               'axes.titlesize': 15,
+               'axes.labelsize': 15,
+               'xtick.labelsize': 12,
+               'ytick.labelsize': 12,
+               'legend.fontsize': 12}
+
 
 def save_phasecontrast_video(t_interval, PhC_data_paths):
     writer = FFMpegWriter(fps=2)
@@ -54,10 +61,17 @@ def build_image_stack(HyS_fp):
             imstack[:, :, d_idx] = im
             print(f'Imported image {d_idx} of {len(data_paths)}')
 
-    # np.save(f'imstack_{H_idx}.npy', imstack)  # Results in a 2.2Gb file, larger than images when stored separately
+    # Results in a 2.2Gb file, larger than images when stored separately
+    # np.save(f'imstack_{H_idx}.npy', imstack)
 
     return imstack
 
+
+def get_resonance_idxs(imstack, peak=True):
+    if peak:
+        return np.argmax(imstack, axis=2)
+    else:
+        return np.argmin(imstack, axis=2)
 
 def get_Pts(data_image, num_of_pts=4, ROI_size=(100, 100), ROI=True):
     if not ROI:
