@@ -9,15 +9,12 @@ from datetime import datetime
 import Settings
 import Functions as fn
 
-root_path = Path(Settings.root_path)
-exp_path = Path(Settings.exp_path)
 
 HyS_path = Path(Settings.HyS_path)
 PhC_path = Path(Settings.PhC_path)
 map_savepath = Path(f'{Settings.savepath}/{Settings.mapfilename}')
 roi_savepath = Path(f'{Settings.savepath}/{Settings.roirectfilename}')
 av_shift_savepath = Path(f'{Settings.savepath}/{Settings.av_shiftfilename}')
-savepath = Path(Settings.savepath)
 
 PhC_data_paths = [p for p in PhC_path.glob('*.tiff')]
 PhC_data_paths.sort(key=lambda x: x.parts[-1])
@@ -53,19 +50,18 @@ wav_ref = np.arange(Settings.wave_initial,
                     Settings.wave_step)
 xvals = np.linspace(0, len(wav_ref), 1000)
 wav_int = np.interp(xvals, range(len(wav_ref)), wav_ref)
-peak = True
 
 # H_idx = 0
-# HyS_fp = '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab/data/Location_1/Hyperspectral/1'
+# HyS_fp = '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab
+# /data/Location_1/Hyperspectral/1'
 for H_idx, HyS_fp in enumerate(HyS_data_paths):
 
     imstack = fn.build_image_stack(HyS_fp)
-    resonance_indexes = fn.get_resonance_idxs(imstack, peak=True)
+    resonance_indexes = fn.get_resonance_idxs(imstack)
     map_store[:, :, H_idx] = wav_ref[resonance_indexes]
     print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
 
-    rect_coords = fn.get_Pts(map_store[:, :, 0], num_of_pts=1,
-                             ROI_size=Settings.ROI_size, ROI=False)
+    rect_coords = fn.get_area(map_store[:, :, 0])
 
     y_min = min(rect_coords[0][1], rect_coords[1][1])
     y_max = max(rect_coords[0][1], rect_coords[1][1])
@@ -117,8 +113,8 @@ np.save(map_savepath, map_store)
 
 '''Get ROI locations from user'''
 num_of_ROIs = Settings.cell_num
-roi_locs = fn.get_Pts(map_store[:, :, 0], num_of_pts=num_of_ROIs,
-                      ROI_size=Settings.ROI_size, ROI=True)
+roi_locs = fn.get_ROIs(map_store[:, :, 0], num_of_pts=num_of_ROIs,
+                      ROI_size=Settings.ROI_size)
 
 print(f'{np.array(roi_locs)} -> {roi_savepath}')
 np.save(roi_savepath, np.array(roi_locs))
@@ -203,9 +199,10 @@ print(f'{np.array(av_shift)} -> {av_shift_savepath}')
 np.save(Settings.histogram_workspace, np.array(hist_data))
 
 '''Plot boxplot of histogram data for improved data visualisation'''
+legend_name = 'well 01 ROI av'  # Needs to be constructed not hard-written
 fig = plt.figure(figsize=(10, 10))
 plt.rcParams.update(fn.FONT_PARAMS)
-plt.title(Settings.legend_name)
+plt.title(legend_name)
 plt.boxplot(hist_data)
 plt.ylabel('Resonance shift [nm]')
 plt.savefig(Settings.boxplot_name, format='png')
