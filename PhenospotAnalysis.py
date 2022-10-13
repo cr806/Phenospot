@@ -67,13 +67,13 @@ for H_idx, HyS_fp in enumerate(HyS_data_paths):
 
     rect_coords = fn.get_area(map_store[:, :, 0])
 
-    y_min = min(rect_coords[0][1], rect_coords[1][1])
-    y_max = max(rect_coords[0][1], rect_coords[1][1])
-    x_min = min(rect_coords[0][0], rect_coords[1][0])
-    x_max = max(rect_coords[0][0], rect_coords[1][0])
-
-    region = imstack[y_min:y_max, x_min:x_max, :]       # slice imstack to ROI
-    mapregion = map_store[y_min:y_max, x_min:x_max, 0]  # slice mapstore
+    # slice imstack to ROI
+    region = imstack[rect_coords[0][1]:rect_coords[1][1],
+                     rect_coords[0][0]:rect_coords[1][0],
+                     :]
+    mapregion = map_store[rect_coords[0][1]:rect_coords[1][1],
+                          rect_coords[0][0]:rect_coords[1][0],
+                          0]                            # slice mapstore
     av_spec = np.mean(region, axis=(0, 1))              # take mean of regions
     res_wav.append(wav_ref[np.argmax(av_spec)])         # find peak of spectrum
 
@@ -117,8 +117,9 @@ np.save(map_savepath, map_store)
 
 '''Get ROI locations from user'''
 num_of_ROIs = Settings.cell_num
-roi_locs = fn.get_ROIs(map_store[:, :, 0], num_of_pts=num_of_ROIs,
-                       ROI_size=Settings.ROI_size)
+roi_locs = fn.get_ROI_areas(map_store[:, :, 0], num_of_pts=num_of_ROIs)
+# roi_locs = fn.get_ROIs(map_store[:, :, 0], num_of_pts=num_of_ROIs,
+#                        ROI_size=Settings.ROI_size)
 
 print(f'{np.array(roi_locs)} -> {roi_savepath}')
 np.save(roi_savepath, np.array(roi_locs))
@@ -126,8 +127,9 @@ np.save(roi_savepath, np.array(roi_locs))
 '''Slice hyperspectral maps into ROI regions'''
 roi_regions = list()
 for r in roi_locs:
-    temp = map_store[r[1]:r[1] + Settings.ROI_size[1],
-                     r[0]:r[0] + Settings.ROI_size[0], :]
+    temp = map_store[r[0][1]:r[1][1], r[0][0]:r[1][0], :]
+    # temp = map_store[r[1]:r[1] + Settings.ROI_size[1],
+    #                  r[0]:r[0] + Settings.ROI_size[0], :]
     roi_regions.append(temp)
 
 '''Calculate mean value of each region (i.e average resonant wavelength)
@@ -166,8 +168,9 @@ with writer.saving(fig, Settings.HyS_videoname, dpi=100):
         print(f'Hyperspectral image {Hyp_idx} processed')
         plt.suptitle(f'Hyperspectral maps of ROIs\nTime: {t:0.1f} h')
         for idx, r in enumerate(roi_locs):
-            temp = map_store[r[1]:r[1] + Settings.ROI_size[1],
-                             r[0]:r[0] + Settings.ROI_size[0], Hyp_idx]
+            temp = map_store[r[0][1]:r[1][1], r[0][0]:r[1][0], Hyp_idx]
+            # temp = map_store[r[1]:r[1] + Settings.ROI_size[1],
+            #                  r[0]:r[0] + Settings.ROI_size[0], Hyp_idx]
 
             sub_x = int(np.ceil(np.sqrt(num_of_ROIs)))
             sub_y = int(np.ceil(num_of_ROIs / sub_x))

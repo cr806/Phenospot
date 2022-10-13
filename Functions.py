@@ -114,7 +114,7 @@ def use_peak(imstack):
         return np.argmin(imstack, axis=2)
 
 
-def get_area(data_image):
+def get_area(data_image, image=None):
     ''' Function to return to (x,y) coordinates as chosen by the user
         Args:
             daya_image: 2D numpy array containing the image data
@@ -122,9 +122,13 @@ def get_area(data_image):
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    fig, ax = plt.subplots(1, 1)
-    ax.axes.xaxis.set_visible(False)
-    ax.axes.yaxis.set_visible(False)
+    if not image:
+        fig, ax = plt.subplots(1, 1)
+        plt.title('Area to be analysed', fontsize=16)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+    else:
+        ax = image
     img = ax.imshow(data_image,
                     interpolation='bilinear',
                     cmap='autumn')
@@ -133,16 +137,20 @@ def get_area(data_image):
     bar = plt.colorbar(img)
     bar.set_label('Resonant Wavelength [nm]')
 
-    locs = []
+    temp = list()
     while True:
-        plt.title(f'You have selected {len(locs)} / 2',
+        plt.title(f'You have selected {len(temp)} / 2',
                   fontsize=16)
         plt.draw()
-        if len(locs) >= 2:
+        if len(temp) >= 2:
             break
         pt = plt.ginput(1, timeout=-1)[0]
-        locs.append((int(pt[0]), int(pt[1])))
-    plt.title('Area to be analysed', fontsize=16)
+        temp.append((int(pt[0]), int(pt[1])))
+
+    locs = list()
+    locs.append((min(temp[0][0], temp[1][0]), min(temp[0][1], temp[1][1])))
+    locs.append((max(temp[0][0], temp[1][0]), max(temp[0][1], temp[1][1])))
+
     pos = locs[0] if locs[1][0] > locs[0][0] else locs[1]
     size_x = max(locs[1][0], locs[0][0]) - min(locs[1][0], locs[0][0])
     size_y = max(locs[1][1], locs[0][1]) - min(locs[1][1], locs[0][1])
@@ -153,10 +161,12 @@ def get_area(data_image):
                              edgecolor='w',
                              facecolor='none')
     ax.add_patch(rect)
-    plt.pause(1)
-    plt.close(fig)
-
-    return locs
+    if not image:
+        plt.pause(1)
+        plt.close(fig)
+        return locs
+    else:
+        return locs, ax
 
 
 def get_ROIs(data_image, num_of_pts=4, ROI_size=(100, 100)):
@@ -222,4 +232,37 @@ def get_ROIs(data_image, num_of_pts=4, ROI_size=(100, 100)):
     plt.pause(1)
     plt.close(fig)
 
+    return locs
+
+
+def get_ROI_areas(data_image, num_of_pts=4):
+    fig, ax = plt.subplots(1, 1)
+    plt.title(f'Select {num_of_pts} ROIs', fontsize=16)
+    ax.axes.xaxis.set_visible(False)
+    ax.axes.yaxis.set_visible(False)
+
+    locs = list()
+    for _ in range(num_of_pts):
+        (pt, ax) = get_area(data_image, image=ax)
+        locs.append(pt)
+    plt.pause(1)
+    plt.close(fig)
+
+    fig = plt.figure(figsize=(10, 10))  # width, height in inches
+    plt.title('ROIs to be measured', fontsize=16)
+    plt.gca().axes.axis('off')
+    sub_x = int(np.ceil(np.sqrt(num_of_pts)))
+    sub_y = int(np.ceil(num_of_pts / sub_x))
+    for i in range(num_of_pts):
+        sub = fig.add_subplot(sub_x, sub_y, i + 1)
+        sub.axes.get_xaxis().set_ticks([])
+        sub.axes.get_yaxis().set_ticks([])
+        sub.set_xlabel(f'ROI: {i}')
+        temp = data_image[locs[i][0][1]:locs[i][1][1],
+                          locs[i][0][0]:locs[i][1][0]]
+        sub.imshow(temp,
+                   interpolation='bilinear',
+                   cmap='autumn')
+    plt.pause(1)
+    plt.close(fig)
     return locs
