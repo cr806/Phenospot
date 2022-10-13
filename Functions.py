@@ -178,8 +178,8 @@ def get_ROIs(data_image, num_of_pts=4, ROI_size=(100, 100)):
                       used to correct coordinate to lower left of ROI box and
                       to disply ROI to user overlaid on image
         Returns:
-            List of 2D numpy arrays, each entry being the index of the resonant
-            pixel from the imstack along axis=2 (i.e. the time data)
+            List of 2D numpy arrays, each entry being the x and y coordinate
+            of the chosen ROI, adjusted for the size of the ROI
     '''
     fig, ax = plt.subplots(1, 1)
     ax.axes.xaxis.set_visible(False)
@@ -236,6 +236,15 @@ def get_ROIs(data_image, num_of_pts=4, ROI_size=(100, 100)):
 
 
 def get_ROI_areas(data_image, num_of_pts=4):
+    ''' Function to return multiple [(x,y)(x,y)] coordinates as chosen by the
+        user defining the corners of the ROIs
+        Args:
+            daya_image: 2D numpy array containing the image data
+            num_of_pts: <int> Number of coordinates to request from user
+        Returns:
+            List of 2D numpy arrays, each entry containing the x and y
+            coordinate of the bottom left and top right of the chosen ROI
+    '''
     fig, ax = plt.subplots(1, 1)
     plt.title(f'Select {num_of_pts} ROIs', fontsize=16)
     ax.axes.xaxis.set_visible(False)
