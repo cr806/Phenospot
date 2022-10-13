@@ -18,14 +18,22 @@ FONT_PARAMS = {'figure.titlesize': 20,
                'legend.fontsize': 12}
 
 
-def save_phasecontrast_video(t_interval, PhC_data_paths):
+def save_phasecontrast_video(time_annotation, image_paths):
+    ''' Function to create a video (with annotations) from a series of images.
+        Images are first flipped up for down, then normalised and finally
+        filtered to remove salt and pepper noise
+        Args:
+            time_annotation: <list> List of times in hours
+                             (e.g. [1, 2.1, 4.5, ...])
+            image_paths: <list> List of filepaths pointing to images
+    '''
     writer = FFMpegWriter(fps=2)
     fig, ax = plt.subplots(1, 1)
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
 
     with writer.saving(fig, Settings.videoname, dpi=100):
-        for t, PhC_fp in zip(t_interval, PhC_data_paths):
+        for t, PhC_fp in zip(time_annotation, image_paths):
             temp = np.array(Image.open(PhC_fp))
             temp = np.flipud(temp)
             temp = temp / np.amax(temp)
@@ -48,8 +56,15 @@ def save_phasecontrast_video(t_interval, PhC_data_paths):
             writer.grab_frame()
 
 
-def build_image_stack(HyS_fp):
-    data_paths = [h for h in Path(HyS_fp).glob('*.tiff')]
+def build_image_stack(image_paths):
+    ''' Function to create a 3D array of images
+        Args:
+            image_paths: <list> List of filepaths pointing to images
+        Returns:
+            imstack: <list> List of 2D numpy arrays containing the image
+                     data (i.e. brightness values from each pixel)
+    '''
+    data_paths = [h for h in Path(image_paths).glob('*.tiff')]
 
     # This is BAD, filename should be standardised or use delimiters
     data_paths.sort(key=lambda x: int(x.stem[6:]))
@@ -68,10 +83,31 @@ def build_image_stack(HyS_fp):
 
 
 def get_resonance_idxs(imstack):
+    ''' Function to return the locations within the imstack (axis=2) of the
+        resonant pixel
+        Args:
+            imstack: <list> List of 2D numpy arrays containing the image
+                     data (i.e. brightness values from each pixel)
+        Returns:
+            2D numpy array, each entry being the index of the resonant pixel
+            from the imstack along axis=2 (i.e. the time data)
+    '''
     return use_peak(imstack)
 
 
 def use_peak(imstack):
+    ''' Simple function to return index of maximum value within the imstack
+        array along axis=2.
+        Will likely be replaced with a function that fits the data along axis=2
+        to a Fano polynomial so that the resonant pixel can be more reliably
+        defined.
+        Args:
+            imstack: <list> List of 2D numpy arrays containing the image
+                     data (i.e. brightness values from each pixel)
+        Returns:
+            2D numpy array, each entry being the index of the resonant pixel
+            from the imstack along axis=2 (i.e. the time data)
+    '''
     if Settings.peak:
         return np.argmax(imstack, axis=2)
     else:
@@ -79,6 +115,13 @@ def use_peak(imstack):
 
 
 def get_area(data_image):
+    ''' Function to return to (x,y) coordinates as chosen by the user
+        Args:
+            daya_image: 2D numpy array containing the image data
+        Returns:
+            2D numpy array, each entry being the index of the resonant pixel
+            from the imstack along axis=2 (i.e. the time data)
+    '''
     fig, ax = plt.subplots(1, 1)
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
@@ -117,6 +160,17 @@ def get_area(data_image):
 
 
 def get_ROIs(data_image, num_of_pts=4, ROI_size=(100, 100)):
+    ''' Function to return multiple (x,y) coordinates as chosen by the user
+        Args:
+            daya_image: 2D numpy array containing the image data
+            num_of_pts: <int> Number of coordinates to request from user
+            ROI_size: <tuple> (int, int) x- and y-size of region or interest,
+                      used to correct coordinate to lower left of ROI box and
+                      to disply ROI to user overlaid on image
+        Returns:
+            List of 2D numpy arrays, each entry being the index of the resonant
+            pixel from the imstack along axis=2 (i.e. the time data)
+    '''
     fig, ax = plt.subplots(1, 1)
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)

@@ -12,9 +12,9 @@ import Functions as fn
 
 HyS_path = Path(Settings.HyS_path)
 PhC_path = Path(Settings.PhC_path)
-map_savepath = Path(f'{Settings.savepath}/{Settings.mapfilename}')
-roi_savepath = Path(f'{Settings.savepath}/{Settings.roirectfilename}')
-av_shift_savepath = Path(f'{Settings.savepath}/{Settings.av_shiftfilename}')
+map_savepath = Path(f'{Settings.mapfilename}')
+roi_savepath = Path(f'{Settings.roirectfilename}')
+av_shift_savepath = Path(f'{Settings.av_shiftfilename}')
 
 PhC_data_paths = [p for p in PhC_path.glob('*.tiff')]
 PhC_data_paths.sort(key=lambda x: x.parts[-1])
@@ -23,6 +23,10 @@ HyS_data_paths = [p for p in HyS_path.iterdir() if p.is_dir()]
 HyS_data_paths.sort(key=lambda x: int(x.parts[-1]))
 
 temp_im = Image.open(PhC_data_paths[0])
+# fig = plt.figure(figsize=(7, 7))
+# plt.rcParams.update(fn.FONT_PARAMS)
+# plt.imshow(temp_im)
+# plt.show()
 
 nfiles = len(PhC_data_paths)
 all_data = list()
@@ -114,7 +118,7 @@ np.save(map_savepath, map_store)
 '''Get ROI locations from user'''
 num_of_ROIs = Settings.cell_num
 roi_locs = fn.get_ROIs(map_store[:, :, 0], num_of_pts=num_of_ROIs,
-                      ROI_size=Settings.ROI_size)
+                       ROI_size=Settings.ROI_size)
 
 print(f'{np.array(roi_locs)} -> {roi_savepath}')
 np.save(roi_savepath, np.array(roi_locs))
