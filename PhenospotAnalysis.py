@@ -52,15 +52,19 @@ fn.save_phasecontrast_video(t_interval, PhC_data_paths)
 wav_ref = np.arange(Settings.wave_initial,
                     Settings.wave_final - Settings.wave_step,
                     Settings.wave_step)
-xvals = np.linspace(0, len(wav_ref), 1000)
-wav_int = np.interp(xvals, range(len(wav_ref)), wav_ref)
+# In original MATLAB code but don't seem to be used
+# xvals = np.linspace(0, len(wav_ref), 1000)
+# wav_int = np.interp(xvals, range(len(wav_ref)), wav_ref)
 
 # H_idx = 0
 # HyS_fp = '/Volumes/krauss/Isabel/Phenospot_TF_data_science_support/Matlab
-# /data/Location_1/Hyperspectral/1'
+#                                              /data/Location_1/Hyperspectral/1'
 for H_idx, HyS_fp in enumerate(HyS_data_paths):
 
     imstack = fn.build_image_stack(HyS_fp)
+    # Results in a 2.2Gb file, larger than images when stored separately
+    # np.save(f'imstack_{H_idx}.npy', imstack)
+
     resonance_indexes = fn.get_resonance_idxs(imstack)
     map_store[:, :, H_idx] = wav_ref[resonance_indexes]
     print(f'Resonant map {H_idx} of {len(HyS_data_paths)} complete')
@@ -184,7 +188,7 @@ with writer.saving(fig, Settings.HyS_videoname, dpi=100):
         writer.grab_frame()
 
 '''Plot histogram of cell count versus resonant wavlength.  Only take value
-   from 5 time interval ???'''
+   from 5th time interval ???'''
 # How many points do you want to consider for the average resonance shift
 # over time?
 fin = 5

@@ -67,7 +67,8 @@ def build_image_stack(image_paths):
     data_paths = [h for h in Path(image_paths).glob('*.tiff')]
 
     # This is BAD, filename should be standardised or use delimiters
-    data_paths.sort(key=lambda x: int(x.stem[6:]))
+    # data_paths.sort(key=lambda x: int(x.stem[6:]))
+    data_paths.sort(key=lambda x: int(x.stem.split('_')[1]))
     temp_im = Image.open(data_paths[0])
     imstack = np.zeros((temp_im.size[1], temp_im.size[0], len(data_paths)))
 
@@ -75,9 +76,6 @@ def build_image_stack(image_paths):
         with Image.open(d) as im:
             imstack[:, :, d_idx] = im
             print(f'Imported image {d_idx} of {len(data_paths)}')
-
-    # Results in a 2.2Gb file, larger than images when stored separately
-    # np.save(f'imstack_{H_idx}.npy', imstack)
 
     return imstack
 
@@ -115,12 +113,12 @@ def use_peak(imstack):
 
 
 def get_area(data_image, image=None):
-    ''' Function to return to (x,y) coordinates as chosen by the user
+    ''' Function to return two (x,y) coordinates as chosen by the user
         Args:
             daya_image: 2D numpy array containing the image data
         Returns:
             2D numpy array, each entry being the index of the resonant pixel
-            from the imstack along axis=2 (i.e. the time data)
+            from the imstack along axis=2 (i.e. the wavelength data)
     '''
     if not image:
         fig, ax = plt.subplots(1, 1)
@@ -239,7 +237,7 @@ def get_ROI_areas(data_image, num_of_pts=4):
     ''' Function to return multiple [(x,y)(x,y)] coordinates as chosen by the
         user defining the corners of the ROIs
         Args:
-            daya_image: 2D numpy array containing the image data
+            data_image: 2D numpy array containing the image data
             num_of_pts: <int> Number of coordinates to request from user
         Returns:
             List of 2D numpy arrays, each entry containing the x and y
