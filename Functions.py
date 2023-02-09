@@ -8,7 +8,7 @@ from pathlib import Path
 from matplotlib.animation import FFMpegWriter
 from matplotlib.offsetbox import AnchoredText
 
-import Settings
+import Config as cfg
 
 FONT_PARAMS = {'figure.titlesize': 20,
                'axes.titlesize': 15,
@@ -18,7 +18,7 @@ FONT_PARAMS = {'figure.titlesize': 20,
                'legend.fontsize': 12}
 
 
-def save_phasecontrast_video(time_annotation, image_paths):
+def save_phasecontrast_video(time_annotation, image_paths, video_filename):
     ''' Function to create a video (with annotations) from a series of images.
         Images are first flipped up for down, then normalised and finally
         filtered to remove salt and pepper noise
@@ -32,8 +32,8 @@ def save_phasecontrast_video(time_annotation, image_paths):
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
 
-    with writer.saving(fig, Settings.videoname, dpi=100):
-        for t, PhC_fp in zip(time_annotation, image_paths):
+    with writer.saving(fig, video_filename, dpi=100):
+        for idx, (t, PhC_fp) in enumerate(zip(time_annotation, image_paths)):
             temp = np.array(Image.open(PhC_fp))
             temp = np.flipud(temp)
             temp = temp / np.amax(temp)
@@ -54,6 +54,7 @@ def save_phasecontrast_video(time_annotation, image_paths):
             ax.add_artist(at)
 
             writer.grab_frame()
+            print(f'Frame {idx + 1} of {len(image_paths)} written')
 
 
 def build_image_stack(image_paths):
@@ -106,7 +107,7 @@ def use_peak(imstack):
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    if Settings.peak:
+    if cfg.peak:
         return np.argmax(imstack, axis=2)
     else:
         return np.argmin(imstack, axis=2)
@@ -122,7 +123,7 @@ def get_area(data_image, image=None):
     '''
     if not image:
         fig, ax = plt.subplots(1, 1)
-        plt.title('Area to be analysed', fontsize=16)
+        plt.suptitle('Area to be analysed', fontsize=16)
         ax.axes.xaxis.set_visible(False)
         ax.axes.yaxis.set_visible(False)
     else:
@@ -132,12 +133,13 @@ def get_area(data_image, image=None):
                     cmap='autumn')
     # img.set_clim(vmin=Settings.wave_initial,
     #              vmax=Settings.wave_final - Settings.wave_step)
-    bar = plt.colorbar(img)
-    bar.set_label('Resonant Wavelength [nm]')
+    if not plt.bar:
+        bar = plt.colorbar(img)
+        bar.set_label('Resonant Wavelength [nm]')
 
     temp = list()
     while True:
-        plt.title(f'You have selected {len(temp)} / 2',
+        plt.title(f'You have selected {len(temp)} / 2 points of the ROI.',
                   fontsize=16)
         plt.draw()
         if len(temp) >= 2:
@@ -150,9 +152,10 @@ def get_area(data_image, image=None):
     locs.append((max(temp[0][0], temp[1][0]), max(temp[0][1], temp[1][1])))
 
     pos = locs[0] if locs[1][0] > locs[0][0] else locs[1]
+
     size_x = max(locs[1][0], locs[0][0]) - min(locs[1][0], locs[0][0])
     size_y = max(locs[1][1], locs[0][1]) - min(locs[1][1], locs[0][1])
-    rect = patches.Rectangle((pos[0], pos[1] - size_y),
+    rect = patches.Rectangle(pos,
                              size_x,
                              size_y,
                              linewidth=2,
@@ -244,7 +247,7 @@ def get_ROI_areas(data_image, num_of_pts=4):
             coordinate of the bottom left and top right of the chosen ROI
     '''
     fig, ax = plt.subplots(1, 1)
-    plt.title(f'Select {num_of_pts} ROIs', fontsize=16)
+    plt.suptitle(f'Select {num_of_pts} ROIs', fontsize=16)
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
 
