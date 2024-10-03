@@ -19,10 +19,12 @@ def create_res_map():
                          temp_im.size[0],
                          len(HyS_data_paths)))
 
-    # Why do we remove a wave_step from wave_final
     wav_ref = np.arange(cfg.wave_initial,
-                        cfg.wave_final - cfg.wave_step,
+                        cfg.wave_final + cfg.wave_step/2,
                         cfg.wave_step)
+
+    assert len(wav_ref) == len(list(HyS_data_paths[0].glob(
+        '*.tiff'))), 'Wavelength array must the number of HyS images'
 
     im_list = list()
     for H_idx, HyS_fp in enumerate(HyS_data_paths):

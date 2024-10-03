@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -18,7 +19,7 @@ FONT_PARAMS = {'figure.titlesize': 20,
                'legend.fontsize': 12}
 
 
-def save_phasecontrast_video(time_annotation, image_paths, video_filename):
+def save_phasecontrast_video(time_annotation, image_paths, video_filename, fps):
     ''' Function to create a video (with annotations) from a series of images.
         Images are first flipped up for down, then normalised and finally
         filtered to remove salt and pepper noise
@@ -27,7 +28,7 @@ def save_phasecontrast_video(time_annotation, image_paths, video_filename):
                              (e.g. [1, 2.1, 4.5, ...])
             image_paths: <list> List of filepaths pointing to images
     '''
-    writer = FFMpegWriter(fps=2)
+    writer = FFMpegWriter(fps=fps)
     fig, ax = plt.subplots(1, 1)
     ax.axes.xaxis.set_visible(False)
     ax.axes.yaxis.set_visible(False)
@@ -81,25 +82,121 @@ def build_image_stack(image_paths):
     return imstack
 
 
-def get_resonance_idxs(imstack):
+def get_resonance_idxs(imstack, res_width=0.1):
     ''' Function to return the locations within the imstack (axis=2) of the
         resonant pixel
         Args:
             imstack: <list> List of 2D numpy arrays containing the image
                      data (i.e. brightness values from each pixel)
+            res: <float> Initial guess for resonant value
+            res_width: <float> Initial guess for resonance FWHM
         Returns:
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    return use_peak(imstack)
+    if cfg.method == 'max' or cfg.method == 'min':
+        return use_peak(imstack)
+    elif cfg.method == 'fano':
+        return use_fano(imstack)
+
+
+def fano(x, amp, assym, res, gamma, off):
+    ''' Fano function used for curve-fitting
+
+        Attributes:
+        x <float> :    Independant data value (i.e. x-value, in this
+                        case pixel number)
+        amp <float>:   Amplitude
+        assym <float>: Assymetry
+        res <float>:   Resonance
+        gamma <float>: Gamma
+        off <float>:   Offset (i.e. function bias away from zero)
+
+        Returns:
+        float: Dependant data value (i.e. y-value)
+    '''
+    num = ((assym * gamma) + (x - res)) * ((assym * gamma) + (x - res))
+    den = (gamma * gamma) + ((x - res)*(x - res))
+    return (amp * (num / den)) + off
+
+    '''
+    From MatLab code:
+        (a*(((b*c)+(x-d))^2/((c)^2+(x-d)^2)))+e
+
+        opts.Lower = [0 -20 peak_width-5 pos_initial-10 0];
+        opts.StartPoint = [6 -10 peak_width pos_initial 1];
+        opts.Upper = [1000 20 peak_width+5 pos_initial+10 5000];
+
+        Rearranging Fano equation to match Python function from IDX Box code:
+            num = ((b * c) + (x-d)) * ((b * c) + (x-d))
+            den = (c * c) + ( (x-d) * (x-d))
+            (a * (num / den)) + e
+
+        So:
+            a => amp
+            b => assym
+            c => gamma
+            x => x
+            d = res
+            e = off
+    '''
+
+
+def use_fano(imstack):
+    ''' Function to return index of resonant value within the imstack
+        array along axis=2.  Fits Fano poynomial to data to return 'true'
+        resonanly location.
+        Args:
+            imstack: <list> List of 2D numpy arrays containing the image
+                     data (i.e. brightness values from each pixel)
+            res: <float> Initial guess for resonant value
+            res_width: <float> Initial guess for resonance FWHM
+        Returns:
+            2D numpy array, each entry being the index of the resonant pixel
+            from the imstack along axis=2 (i.e. the time data)
+    '''
+
+    '''
+    From MatLab code:
+        opts.Lower = [0 -20 peak_width-5 pos_initial-10 0];
+        opts.StartPoint = [6 -10 peak_width pos_initial 1];
+        opts.Upper = [1000 20 peak_width+5 pos_initial+10 5000];
+
+    # Amplitude guess can be (maximum pixel value * 0.8) +/- 20%
+    # Offset guess can be average of all pixel values +/- 20%
+    # (Aplitude + offset) must be less than maximum pixel value
+    # Assymetry should be very close to 0 if Lorentz shape resonances usually
+    #   observed
+    '''
+
+    # Use maximum pixel location as initial resonance guess
+    res_array = np.argmax(imstack, axis=2)
+    off_array = np.mean(imstack, axis=2)
+    amp_array = np.amax(imstack, axis=2) - off_array
+    xdata = np.arange(0, imstack.shape[2], 1)
+    results = np.zeros(imstack[:, :, 0].shape)
+    res_width = cfg.resonant_width
+
+    for i in range(imstack.shape[0]):
+        for j in range(imstack.shape[1]):
+            ydata = imstack[i, j, :]
+            res = res_array[i, j]
+            off = off_array[i, j]
+            amp = amp_array[i, j]
+
+            initial = [amp,          0,          res_width,          res,         off]
+            bounds = ([(0.5 * amp), -1, (0.90 * res_width), (0.95 * res), (0.5 * off)],
+                      [(1.5 * amp),  1, (1.10 * res_width), (1.05 * res), (1.5 * off)])
+            popt, _ = curve_fit(fano, xdata, ydata, p0=initial, bounds=bounds)
+
+            _, _, _, res_pos, _ = popt
+            results[i, j] = res_pos
+    return results
 
 
 def use_peak(imstack):
     ''' Simple function to return index of maximum value within the imstack
         array along axis=2.
-        Will likely be replaced with a function that fits the data along axis=2
-        to a Fano polynomial so that the resonant pixel can be more reliably
-        defined.
         Args:
             imstack: <list> List of 2D numpy arrays containing the image
                      data (i.e. brightness values from each pixel)
@@ -107,16 +204,16 @@ def use_peak(imstack):
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    if cfg.peak:
+    if cfg.method == 'max':
         return np.argmax(imstack, axis=2)
-    else:
+    elif cfg.method == 'min':
         return np.argmin(imstack, axis=2)
 
 
 def get_area(data_image, image=None):
     ''' Function to return two (x,y) coordinates as chosen by the user
         Args:
-            daya_image: 2D numpy array containing the image data
+            data_image: 2D numpy array containing the image data
         Returns:
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the wavelength data)
