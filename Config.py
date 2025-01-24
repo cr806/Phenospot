@@ -1,37 +1,27 @@
-'''########################################################################'''
-'''#                 General experimental settings                        #'''
-'''########################################################################'''
-root_path = '/Users/chris/Documents/SoftwareDev/Python'
-exp_path = 'Phenospot/Data/Location_1'
+########################################################################
+#                 General experimental settings                        #
+########################################################################
+root_path = '/Volumes/krauss/Lisa/Phenospot/Biofilms'
+expt_path = 'Experiment 1 - Test run 250121/2_biofilm_18h'
 
-'''########################################################################'''
-'''#                     Resonant map Settings                            #'''
-'''########################################################################'''
-wave_initial = 670
-wave_final = 674.2  # 690
+########################################################################
+#                     Resonant map Settings                            #
+########################################################################
+wave_initial = 622
+wave_final = 632
 wave_step = 0.2
 
-peak = True
+image_size = (1920, 1460)
 
-map_data = 'mapstore.npy'
+method = 'max'
+# method = 'min'
+# method = 'fano'
 
-'''########################################################################'''
-'''#                 Phase-contrast video settings                        #'''
-'''########################################################################'''
-# How many hours after cell activation was the first image taken?
-act_time = 0  # hrs
+HyS_image_filename = 'Hyperspectral_Image.png'
 
-PhC_video = 'loc01_ROI_av.mp4'
+########################################################################
+#                 Phase-contrast video settings                        #
+########################################################################
 
-'''########################################################################'''
-'''#                    Data analysis settings                            #'''
-'''########################################################################'''
-cell_num = 2
-
-roirect_data = 'roi_rect.npy'
-av_shift_data = 'av_shift.npy'
-histogram_data = 'loc_01_hist_ROI_av.npy'
-histogram_chart = 'loc_01_ROI_av_hist.png'
-res_over_t_chart = 'res_curves_wav_t_loc_01_ROI_av.png'
-boxplot_chart = 'boxplot_loc_01_ROI_av.png'
-HyS_video = 'loc01_ROI_HyS.mp4'
+PhC_video_filename = 'PhaseContrastVideo.mp4'
+video_length = 20

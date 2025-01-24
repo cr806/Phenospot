@@ -1,68 +1,85 @@
 import numpy as np
+import pandas as pd
 from pathlib import Path
 from PIL import Image
 
-import Config as cfg
-import Functions as fn
+from Config import (root_path, expt_path, wave_initial,
+                    wave_final, wave_step, image_size,
+                    method, HyS_image_filename)
+from Functions import build_image_stack, get_resonance_idxs
 
 
-def create_res_map():
-    HyS_path = Path(cfg.root_path, cfg.exp_path, 'Hyperspectral')
+def create_res_maps(break_at=-1):
+    try:
+        dtypes = {
+            'Filepath': 'string',
+            'Processed': 'bool',
+            'Result': 'string'
+        }
+        HyS_df = pd.read_csv(Path(root_path, expt_path, 'HyS_results.csv'),
+                             dtype=dtypes)
+        print('HyS_results.csv found and loaded.')
+    except FileNotFoundError:
+        root_len = len(Path(root_path).parts)
+        HyS_path = Path(root_path, expt_path, 'Hyperspectral')
 
-    HyS_data_paths = [p for p in HyS_path.iterdir() if p.is_dir()]
-    HyS_data_paths.sort(key=lambda x: int(x.parts[-1]))
+        HyS_data_paths = [Path(*p.parts[root_len:])
+                          for p in HyS_path.iterdir()
+                          if p.is_dir()]
+        HyS_data_paths.sort(key=lambda x: int(x.stem))
+        HyS_df = pd.DataFrame(HyS_data_paths,
+                              columns=['Filepath'],
+                              dtype='string')
+        HyS_df['Processed'] = False
+        HyS_df['Processed'] = HyS_df['Processed'].astype(bool)
+        HyS_df['Result'] = 'None'
+        HyS_df['Result'] = HyS_df['Result'].astype('string')
+        HyS_df.to_csv(Path(root_path, expt_path, 'HyS_results.csv'),
+                      index=False)
+        print('HyS_results.csv not found. Creating new file.')
 
-    temp_path = list(HyS_data_paths[0].glob('*.tiff'))[0]
-    temp_im = Image.open(temp_path)
+    HyS_data_paths = HyS_df[HyS_df['Processed'] == False]['Filepath']  # noqa: E712, E501
 
-    map_store = np.zeros((temp_im.size[1],
-                         temp_im.size[0],
-                         len(HyS_data_paths)))
+    if HyS_data_paths.empty:
+        print('All HyS data has been processed. Exiting...')
+        return
 
-    wav_ref = np.arange(cfg.wave_initial,
-                        cfg.wave_final + cfg.wave_step/2,
-                        cfg.wave_step)
+    wav_ref = np.arange(wave_initial,
+                        wave_final + wave_step/2,
+                        wave_step)
 
-    assert len(wav_ref) == len(list(HyS_data_paths[0].glob(
-        '*.tiff'))), 'Wavelength array must the number of HyS images'
+    assert len(wav_ref) == len(list(Path(HyS_data_paths.values[0]).glob(
+            '*.tiff'))), 'Wavelength array must the number of HyS images'
 
-    im_list = list()
-    for H_idx, HyS_fp in enumerate(HyS_data_paths):
+    for idx, fp in enumerate(HyS_data_paths):
+        if break_at > 0 and idx == break_at:
+            break
+        print(f'Processing "{fp}"')
+        imstack = build_image_stack(Path(root_path, fp), image_size)
 
-        imstack = fn.build_image_stack(HyS_fp)
-        # Results in a 2.2Gb file, larger than images when stored separately
-        # np.save(f'imstack_{H_idx}.npy', imstack)
-
-        resonance_indexes = fn.get_resonance_idxs(imstack)
-        map_store[:, :, H_idx] = wav_ref[resonance_indexes]
+        resonance_indexes = get_resonance_idxs(imstack, method)
+        HyS_image = wav_ref[resonance_indexes]
 
         # Multiply resonant data by 10 so not to lose resolution (i.e. take
-        # one decimal place f64 and make compatible with int16) then scale for
-        # uint16 (i.e. min value 0, max 65536)
-        u16in = (((wav_ref[resonance_indexes] - cfg.wave_initial) * 10)
-                 * (65536 / ((cfg.wave_final - cfg.wave_initial) * 10)))
+        # one decimal place f64 and make compatible with int16 (0 -> 65536))
+        u16in = HyS_image * 10
         u16in = u16in.astype(np.uint16)
         out_pil = u16in.astype(u16in.dtype.newbyteorder('<')).tobytes()
-        img_out = Image.frombytes('I;16', (1920, 1460), out_pil)
-        im_list.append(img_out)
+        img_out = Image.frombytes('I;16', image_size, out_pil)
+        img_out.save(Path(root_path, fp, HyS_image_filename))
 
-        print(f'Resonant map {H_idx + 1} of {len(HyS_data_paths)} complete')
+        # Update dataframe with resulting filename and set processed to True
+        HyS_df.loc[HyS_df['Filepath'] == fp, 'Processed'] = True
+        HyS_df.loc[HyS_df['Filepath'] == fp, 'Result'] = str(
+                                                 Path(expt_path,
+                                                      HyS_image_filename))
+        # Update progress file on disk every 10th iteration
+        if idx % 10 == 0:
+            HyS_df.to_csv(Path(root_path, expt_path, 'HyS_results.csv'),
+                          index=False)
 
-    save_path = Path(cfg.root_path, cfg.exp_path, cfg.map_data)
-    print(f'Resonant map data -> {str(save_path)}')
-    np.save(save_path, map_store)
-
-    save_path = Path(cfg.root_path,
-                     cfg.exp_path,
-                     f'{cfg.map_data[:-4]}.tiff')
-    print(f'Resonant map data as TIFF stack -> {str(save_path)}')
-    im_list[0].save(save_path,
-                    format='TIFF',
-                    save_all=True,
-                    append_images=im_list[1:])
-
-    return map_store
+    HyS_df.to_csv(Path(root_path, expt_path, 'HyS_results.csv'), index=False)
 
 
 if __name__ == '__main__':
-    map_store = create_res_map()
+    create_res_maps(break_at=2)

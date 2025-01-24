@@ -1,5 +1,4 @@
 import numpy as np
-import scipy as sp
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -9,7 +8,7 @@ from pathlib import Path
 from matplotlib.animation import FFMpegWriter
 from matplotlib.offsetbox import AnchoredText
 
-import Config as cfg
+import Config as root_path
 
 FONT_PARAMS = {'figure.titlesize': 20,
                'axes.titlesize': 15,
@@ -19,7 +18,11 @@ FONT_PARAMS = {'figure.titlesize': 20,
                'legend.fontsize': 12}
 
 
-def save_phasecontrast_video(time_annotation, image_paths, video_filename, fps):
+def save_phasecontrast_video(time_annotation,
+                             image_paths,
+                             video_filename,
+                             t_interval,
+                             video_length):
     ''' Function to create a video (with annotations) from a series of images.
         Images are first flipped up for down, then normalised and finally
         filtered to remove salt and pepper noise
@@ -28,24 +31,27 @@ def save_phasecontrast_video(time_annotation, image_paths, video_filename, fps):
                              (e.g. [1, 2.1, 4.5, ...])
             image_paths: <list> List of filepaths pointing to images
     '''
-    writer = FFMpegWriter(fps=fps)
-    fig, ax = plt.subplots(1, 1)
-    ax.axes.xaxis.set_visible(False)
-    ax.axes.yaxis.set_visible(False)
+    writer = FFMpegWriter(fps=int(len(t_interval)/video_length))
+
+    PhC_image = np.array(Image.open(image_paths[0]))
+    PhC_image = np.flipud(PhC_image)
+    PhC_image = PhC_image - np.amin(PhC_image)
+    PhC_image = PhC_image / np.amax(PhC_image)
+
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 7), layout='tight')
+
+    img_PhC = ax.imshow(PhC_image, aspect='auto', cmap='gray', vmin=0, vmax=1)
+    ax.axis('off')
+    ax.set_title('Phase contrast image')
 
     with writer.saving(fig, video_filename, dpi=100):
         for idx, (t, PhC_fp) in enumerate(zip(time_annotation, image_paths)):
             temp = np.array(Image.open(PhC_fp))
             temp = np.flipud(temp)
+            temp = temp - np.amin(temp)
             temp = temp / np.amax(temp)
-            temp = sp.signal.medfilt2d(temp, kernel_size=3)
-            # all_data.append(temp)
 
-            try:
-                img.set_data(temp)
-            except NameError:
-                img = ax.imshow(temp, cmap='gray')
-                img.set_clim(vmin=0, vmax=1)
+            img_PhC.set_data(temp)
 
             at = AnchoredText(f'Time: {t:0.1f} h',
                               prop=dict(size=20),
@@ -55,10 +61,10 @@ def save_phasecontrast_video(time_annotation, image_paths, video_filename, fps):
             ax.add_artist(at)
 
             writer.grab_frame()
-            print(f'Frame {idx + 1} of {len(image_paths)} written')
+            print(f'Frame {idx + 1} of {len(image_paths)} written', end='\r')
 
 
-def build_image_stack(image_paths):
+def build_image_stack(image_paths, image_size):
     ''' Function to create a 3D array of images
         Args:
             image_paths: <list> List of filepaths pointing to images
@@ -67,22 +73,19 @@ def build_image_stack(image_paths):
                      data (i.e. brightness values from each pixel)
     '''
     data_paths = [h for h in Path(image_paths).glob('*.tiff')]
-
-    # This is BAD, filename should be standardised or use delimiters
-    # data_paths.sort(key=lambda x: int(x.stem[6:]))
     data_paths.sort(key=lambda x: int(x.stem.split('_')[1]))
-    temp_im = Image.open(data_paths[0])
-    imstack = np.zeros((temp_im.size[1], temp_im.size[0], len(data_paths)))
 
-    for d_idx, d in enumerate(data_paths):
+    imstack = np.zeros((image_size[1], image_size[0], len(data_paths)))
+    print(f'Creating image stack size: {imstack.shape}')
+    for idx, d in enumerate(data_paths):
         with Image.open(d) as im:
-            imstack[:, :, d_idx] = im
-            print(f'Imported image {d_idx} of {len(data_paths)}')
+            imstack[:, :, idx] = im
+            print(f'Imported image {idx+1} of {len(data_paths)}', end='\r')
 
     return imstack
 
 
-def get_resonance_idxs(imstack, res_width=0.1):
+def get_resonance_idxs(imstack, method):
     ''' Function to return the locations within the imstack (axis=2) of the
         resonant pixel
         Args:
@@ -94,9 +97,9 @@ def get_resonance_idxs(imstack, res_width=0.1):
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    if cfg.method == 'max' or cfg.method == 'min':
-        return use_peak(imstack)
-    elif cfg.method == 'fano':
+    if root_path.method == 'max' or root_path.method == 'min':
+        return use_peak(imstack, method)
+    elif root_path.method == 'fano':
         return use_fano(imstack)
 
 
@@ -119,33 +122,11 @@ def fano(x, amp, assym, res, gamma, off):
     den = (gamma * gamma) + ((x - res)*(x - res))
     return (amp * (num / den)) + off
 
-    '''
-    From MatLab code:
-        (a*(((b*c)+(x-d))^2/((c)^2+(x-d)^2)))+e
-
-        opts.Lower = [0 -20 peak_width-5 pos_initial-10 0];
-        opts.StartPoint = [6 -10 peak_width pos_initial 1];
-        opts.Upper = [1000 20 peak_width+5 pos_initial+10 5000];
-
-        Rearranging Fano equation to match Python function from IDX Box code:
-            num = ((b * c) + (x-d)) * ((b * c) + (x-d))
-            den = (c * c) + ( (x-d) * (x-d))
-            (a * (num / den)) + e
-
-        So:
-            a => amp
-            b => assym
-            c => gamma
-            x => x
-            d = res
-            e = off
-    '''
-
 
 def use_fano(imstack):
     ''' Function to return index of resonant value within the imstack
         array along axis=2.  Fits Fano poynomial to data to return 'true'
-        resonanly location.
+        resonant location.
         Args:
             imstack: <list> List of 2D numpy arrays containing the image
                      data (i.e. brightness values from each pixel)
@@ -156,26 +137,13 @@ def use_fano(imstack):
             from the imstack along axis=2 (i.e. the time data)
     '''
 
-    '''
-    From MatLab code:
-        opts.Lower = [0 -20 peak_width-5 pos_initial-10 0];
-        opts.StartPoint = [6 -10 peak_width pos_initial 1];
-        opts.Upper = [1000 20 peak_width+5 pos_initial+10 5000];
-
-    # Amplitude guess can be (maximum pixel value * 0.8) +/- 20%
-    # Offset guess can be average of all pixel values +/- 20%
-    # (Aplitude + offset) must be less than maximum pixel value
-    # Assymetry should be very close to 0 if Lorentz shape resonances usually
-    #   observed
-    '''
-
     # Use maximum pixel location as initial resonance guess
     res_array = np.argmax(imstack, axis=2)
     off_array = np.mean(imstack, axis=2)
     amp_array = np.amax(imstack, axis=2) - off_array
     xdata = np.arange(0, imstack.shape[2], 1)
     results = np.zeros(imstack[:, :, 0].shape)
-    res_width = cfg.resonant_width
+    res_width = 50
 
     for i in range(imstack.shape[0]):
         for j in range(imstack.shape[1]):
@@ -184,17 +152,23 @@ def use_fano(imstack):
             off = off_array[i, j]
             amp = amp_array[i, j]
 
-            initial = [amp,          0,          res_width,          res,         off]
-            bounds = ([(0.5 * amp), -1, (0.90 * res_width), (0.95 * res), (0.5 * off)],
-                      [(1.5 * amp),  1, (1.10 * res_width), (1.05 * res), (1.5 * off)])
-            popt, _ = curve_fit(fano, xdata, ydata, p0=initial, bounds=bounds)
+            initial = [amp, 0, res_width, res, off]
+            bounds = ([(0.5 * amp), -1, (0.90 * res_width),
+                       (0.95 * res), (0.5 * off)],
+                      [(1.5 * amp),  1, (1.10 * res_width),
+                       (1.05 * res), (1.5 * off)])
 
-            _, _, _, res_pos, _ = popt
+            try:
+                popt, _ = curve_fit(fano, xdata, ydata,
+                                    p0=initial, bounds=bounds)
+                _, _, _, res_pos, _ = popt
+            except (RuntimeError, ValueError):
+                res_pos = 0
             results[i, j] = res_pos
     return results
 
 
-def use_peak(imstack):
+def use_peak(imstack, method):
     ''' Simple function to return index of maximum value within the imstack
         array along axis=2.
         Args:
@@ -204,9 +178,9 @@ def use_peak(imstack):
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    if cfg.method == 'max':
+    if method == 'max':
         return np.argmax(imstack, axis=2)
-    elif cfg.method == 'min':
+    elif method == 'min':
         return np.argmin(imstack, axis=2)
 
 

@@ -1,9 +1,7 @@
-**/venv
+**/.venv
 **/.vscode
 **/__pycache__
 **/Data
 **/Polydopamine*
+**/Dev_scripts
 .DS_Store
-imstack.npy
-GinputTest.py
-test.py
