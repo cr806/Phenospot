@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from PIL import Image
