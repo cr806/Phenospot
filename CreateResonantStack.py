@@ -1,11 +1,12 @@
-import numpy as np
+import sys
 import pandas as pd
 from pathlib import Path
 from PIL import Image
 
 from Config import (root_path, expt_path, wave_initial,
-                    wave_final, wave_step, image_size,
-                    method, HyS_image_filename)
+                    wave_final, wave_step, wave_slice_start,
+                    wave_slice_end, image_size, method,
+                    HyS_image_filename)
 from Functions import build_image_stack, get_resonance_idxs
 
 
@@ -48,14 +49,22 @@ def create_res_maps(break_at=-1):
                         wave_final + wave_step/2,
                         wave_step)
 
-    assert len(wav_ref) == len(list(Path(HyS_data_paths.values[0]).glob(
-            '*.tiff'))), 'Wavelength array must the number of HyS images'
+    assert len(wav_ref) == len(list(Path(root_path, HyS_data_paths.values[0]).glob(
+            '*.tiff'))), 'Wavelength array must match the number of HyS images'
+
+    img_start_idx = np.argmin(np.abs(wav_ref - wave_slice_start))
+    img_end_idx = np.argmin(np.abs(wav_ref - wave_slice_end))
+
+    wav_ref = np.arange(wave_slice_start,
+                        wave_slice_end + wave_step/2,
+                        wave_step)
 
     for idx, fp in enumerate(HyS_data_paths):
         if break_at > 0 and idx == break_at:
             break
         print(f'Processing "{fp}"')
-        imstack = build_image_stack(Path(root_path, fp), image_size)
+        imstack = build_image_stack(Path(root_path, fp), image_size,
+                                    img_start_idx, img_end_idx)
 
         resonance_indexes = get_resonance_idxs(imstack, method)
         HyS_image = wav_ref[resonance_indexes]
@@ -82,4 +91,7 @@ def create_res_maps(break_at=-1):
 
 
 if __name__ == '__main__':
-    create_res_maps(break_at=2)
+    if len(sys.argv) > 1:
+        create_res_maps(int(sys.argv[1]))
+    else:
+        create_res_maps()

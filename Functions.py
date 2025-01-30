@@ -8,8 +8,6 @@ from pathlib import Path
 from matplotlib.animation import FFMpegWriter
 from matplotlib.offsetbox import AnchoredText
 
-import Config as root_path
-
 FONT_PARAMS = {'figure.titlesize': 20,
                'axes.titlesize': 15,
                'axes.labelsize': 15,
@@ -31,10 +29,12 @@ def save_phasecontrast_video(time_annotation,
                              (e.g. [1, 2.1, 4.5, ...])
             image_paths: <list> List of filepaths pointing to images
     '''
-    writer = FFMpegWriter(fps=int(len(t_interval)/video_length))
+    if FPS := (len(t_interval) // video_length) < 1:
+        FPS = 1
+
+    writer = FFMpegWriter(fps=FPS)
 
     PhC_image = np.array(Image.open(image_paths[0]))
-    PhC_image = np.flipud(PhC_image)
     PhC_image = PhC_image - np.amin(PhC_image)
     PhC_image = PhC_image / np.amax(PhC_image)
 
@@ -47,7 +47,6 @@ def save_phasecontrast_video(time_annotation,
     with writer.saving(fig, video_filename, dpi=100):
         for idx, (t, PhC_fp) in enumerate(zip(time_annotation, image_paths)):
             temp = np.array(Image.open(PhC_fp))
-            temp = np.flipud(temp)
             temp = temp - np.amin(temp)
             temp = temp / np.amax(temp)
 
@@ -64,16 +63,20 @@ def save_phasecontrast_video(time_annotation,
             print(f'Frame {idx + 1} of {len(image_paths)} written', end='\r')
 
 
-def build_image_stack(image_paths, image_size):
+def build_image_stack(image_paths, image_size, img_start_idx, img_end_idx):
     ''' Function to create a 3D array of images
         Args:
             image_paths: <list> List of filepaths pointing to images
+            image_size: <tuple> (int, int) Size of the images
+            img_start_idx: <int> Index of the first image to be included
+            img_end_idx: <int> Index of the last image to be included
         Returns:
             imstack: <list> List of 2D numpy arrays containing the image
                      data (i.e. brightness values from each pixel)
     '''
     data_paths = [h for h in Path(image_paths).glob('*.tiff')]
     data_paths.sort(key=lambda x: int(x.stem.split('_')[1]))
+    data_paths = data_paths[img_start_idx:img_end_idx + 1]
 
     imstack = np.zeros((image_size[1], image_size[0], len(data_paths)))
     print(f'Creating image stack size: {imstack.shape}')
@@ -97,9 +100,9 @@ def get_resonance_idxs(imstack, method):
             2D numpy array, each entry being the index of the resonant pixel
             from the imstack along axis=2 (i.e. the time data)
     '''
-    if root_path.method == 'max' or root_path.method == 'min':
+    if method == 'max' or method == 'min':
         return use_peak(imstack, method)
-    elif root_path.method == 'fano':
+    elif method == 'fano':
         return use_fano(imstack)
 
 
