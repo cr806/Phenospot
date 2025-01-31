@@ -5,10 +5,15 @@ from pathlib import Path
 from PIL import Image
 
 from Config import (root_path, expt_path, wave_initial,
-                    wave_final, wave_step, wave_slice_start,
-                    wave_slice_end, image_size, method,
+                    wave_final, wave_step, image_size, method,
                     HyS_image_filename)
 from Functions import build_image_stack, get_resonance_idxs
+
+try:
+    from Config import wave_slice_start, wave_slice_end
+except ImportError:
+    wave_slice_start = wave_initial
+    wave_slice_end = wave_final
 
 
 def create_res_maps(break_at=-1):
