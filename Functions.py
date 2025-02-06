@@ -29,7 +29,7 @@ def save_phasecontrast_video(time_annotation,
                              (e.g. [1, 2.1, 4.5, ...])
             image_paths: <list> List of filepaths pointing to images
     '''
-    if FPS := (len(t_interval) // video_length) < 1:
+    if (FPS := (len(t_interval) // video_length)) < 1:
         FPS = 1
 
     writer = FFMpegWriter(fps=FPS)
@@ -63,7 +63,7 @@ def save_phasecontrast_video(time_annotation,
             print(f'Frame {idx + 1} of {len(image_paths)} written', end='\r')
 
 
-def build_image_stack(image_paths, image_size, img_start_idx, img_end_idx):
+def build_image_stack(images_path, image_size, img_start_idx, img_end_idx):
     ''' Function to create a 3D array of images
         Args:
             image_paths: <list> List of filepaths pointing to images
@@ -74,7 +74,7 @@ def build_image_stack(image_paths, image_size, img_start_idx, img_end_idx):
             imstack: <list> List of 2D numpy arrays containing the image
                      data (i.e. brightness values from each pixel)
     '''
-    data_paths = [h for h in Path(image_paths).glob('*.tiff')]
+    data_paths = [h for h in Path(images_path).glob('*.tiff')]
     data_paths.sort(key=lambda x: int(x.stem.split('_')[1]))
     data_paths = data_paths[img_start_idx:img_end_idx + 1]
 

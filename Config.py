@@ -2,7 +2,7 @@
 #                 General experimental settings                        #
 ########################################################################
 root_path = '/Volumes/krauss/Lisa/Phenospot/Biofilms'
-expt_path = 'Experiment 1 - Test run 250121/1_setup_30 min/Location_1'
+expt_path = 'Experiment 1 - Test run 250121/2_biofilm_18h'
 
 ########################################################################
 #                     Experiment Settings                            #
@@ -16,8 +16,8 @@ image_size = (1920, 1460)
 ########################################################################
 #                     Resonant map Settings                            #
 ########################################################################
-wave_slice_start = 627
-wave_slice_end = 630
+wave_slice_start = 622
+wave_slice_end = 632
 
 method = 'max'
 # method = 'min'

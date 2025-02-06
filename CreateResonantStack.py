@@ -55,8 +55,7 @@ def create_res_maps(break_at=-1):
                         wave_final + wave_step/2,
                         wave_step)
 
-    assert len(wav_ref) == len(list(Path(root_path, HyS_data_paths.values[0]).glob(
-            '*.tiff'))), 'Wavelength array must match the number of HyS images'
+    assert len(wav_ref) == len(list(Path(root_path, HyS_data_paths.values[0]).glob('*.tiff'))), 'Wavelength array must match the number of HyS images'  # noqa: E501
 
     img_start_idx = np.argmin(np.abs(wav_ref - wave_slice_start))
     img_end_idx = np.argmin(np.abs(wav_ref - wave_slice_end))
@@ -86,7 +85,7 @@ def create_res_maps(break_at=-1):
         # Update dataframe with resulting filename and set processed to True
         HyS_df.loc[HyS_df['Filepath'] == fp, 'Processed'] = True
         HyS_df.loc[HyS_df['Filepath'] == fp, 'Result'] = str(
-                                                 Path(expt_path,
+                                                 Path(fp,
                                                       HyS_image_filename))
         # Update progress file on disk every 10th iteration
         if idx % 10 == 0:
