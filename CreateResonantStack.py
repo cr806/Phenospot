@@ -84,9 +84,7 @@ def create_res_maps(break_at=-1):
 
         # Update dataframe with resulting filename and set processed to True
         HyS_df.loc[HyS_df['Filepath'] == fp, 'Processed'] = True
-        HyS_df.loc[HyS_df['Filepath'] == fp, 'Result'] = str(
-                                                 Path(fp,
-                                                      HyS_image_filename))
+        HyS_df.loc[HyS_df['Filepath'] == fp, 'Result'] = str(Path(fp, HyS_image_filename).as_posix())  # noqa
         # Update progress file on disk every 10th iteration
         if idx % 10 == 0:
             HyS_df.to_csv(Path(root_path, expt_path, 'HyS_results.csv'),
