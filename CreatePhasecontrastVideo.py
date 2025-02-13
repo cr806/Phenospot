@@ -1,5 +1,4 @@
 from pathlib import Path
-from datetime import datetime
 
 from Config import root_path, expt_path, video_length, PhC_video_filename
 from Functions import save_phasecontrast_video
@@ -14,9 +13,9 @@ def create_phase_contrast_video():
     mod_time = list()
     for PhC_fp in PhC_data_paths:
         m_timestamp = PhC_fp.stat().st_mtime
-        mod_time.append(datetime.fromtimestamp(m_timestamp))
+        mod_time.append(m_timestamp)
 
-    t_interval = [((t - mod_time[0]).seconds/3600) for t in mod_time]
+    t_interval = [((t - mod_time[0])/3600) for t in mod_time]
 
     save_path = Path(root_path, expt_path, PhC_video_filename)
     if save_path.exists():
